@@ -24,9 +24,12 @@
 -export([new/0,
          update/2, update_all/2,
          count/1,
+	 sum/1, sum2/1,
          min/1, mean/1, max/1,
          variance/1, sdev/1,
-         summary/1]).
+         summary/1,
+	 summary_proplist/1
+	]).
 
 -include("stats.hrl").
 
@@ -67,6 +70,10 @@ count(State) ->
 min(State) ->
     State#state.min.
 
+sum(State) -> State#state.sum.
+
+sum2(State) -> State#state.sum2.
+
 mean(#state{n = 0}) ->
     'NaN';
 mean(State) ->
@@ -93,6 +100,15 @@ sdev(State) ->
 summary(State) ->
     {min(State), mean(State), max(State), variance(State), sdev(State)}.
             
+summary_proplist(State) ->
+    [{count, count(State)},
+     {min, min(State)},
+     {mean, mean(State)},
+     {max, max(State)},
+     {variance, variance(State)},
+     {sdev, sdev(State)},
+     {sum, sum(State)},
+     {sum2, sum2(State)}].
 
 %% ===================================================================
 %% Internal functions
