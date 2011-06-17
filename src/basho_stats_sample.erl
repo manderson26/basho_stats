@@ -31,13 +31,26 @@
 	 summary_proplist/1
 	]).
 
+-export([format_utc_timestamp/0, format_utc_timestamp/1]). 
+
 -include("stats.hrl").
 
 -record(state, { n = 0,
                  min = 'NaN',
                  max = 'NaN',
                  sum  = 0,
-                 sum2 = 0 }).
+                 sum2 = 0,
+		 latest = 0,
+		 last_update = {0,0,0}
+	       }).
+
+
+
+format_utc_timestamp() -> 
+    format_utc_timestamp(os:timestamp()).
+format_utc_timestamp({_,_,Micro} = TS) ->
+    {{Year,Month,Day},{Hour,Minute,Second}} = calendar:now_to_universal_time(TS), 
+    iolist_to_binary(io_lib:format("~4w/~2..0w/~2..0w ~2w:~2..0w:~2..0w.~6..0w", [Year,Month,Day,Hour,Minute,Second,Micro])).
 
 
 %% ===================================================================
@@ -50,6 +63,8 @@ new() ->
 update(Value, State) ->
     State#state {
       n   = State#state.n + 1,
+      latest = Value,
+      last_update = erlang:now(),
       min = nan_min(Value, State#state.min),
       max = nan_max(Value, State#state.max),
       sum = State#state.sum + Value,
@@ -70,6 +85,9 @@ sum(State) -> State#state.sum.
 
 sum2(State) -> State#state.sum2.
 
+latest(State) -> State#state.latest.
+latest_as_timestamp(State) -> format_utc_timestamp(State#state.last_update).
+		       
 mean(#state{n = 0}) ->
     'NaN';
 mean(State) ->
@@ -84,7 +102,6 @@ variance(State) ->
     SumSq = State#state.sum * State#state.sum,
     (State#state.sum2 - (SumSq / State#state.n)) / (State#state.n - 1).
 
-
 sdev(State) ->
     case variance(State) of
         'NaN' ->
@@ -95,16 +112,27 @@ sdev(State) ->
 
 summary(State) ->
     {min(State), mean(State), max(State), variance(State), sdev(State)}.
-            
+          
+usec_to_msec(V) when is_number(V) -> V / 1000.0;
+usec_to_msec('NaN') -> 'NaN'.
+  
 summary_proplist(State) ->
     [{count, count(State)},
-     {min, min(State)},
-     {mean, mean(State)},
-     {max, max(State)},
-     {variance, variance(State)},
-     {sdev, sdev(State)},
+     {min_us, min(State)},
+     {min, usec_to_msec(min(State))},
+     {mean_us, mean(State)},
+     {mean, usec_to_msec(mean(State))},
+     {max_us, max(State)},
+     {max, usec_to_msec(max(State))},
+     {last, latest(State)},
+     {variance_us, variance(State)},
+     {variance, usec_to_msec(variance(State))},
+     {sdev_us, sdev(State)},
+     {sdev, usec_to_msec(sdev(State))},
      {sum, sum(State)},
-     {sum2, sum2(State)}].
+     {sum2, sum2(State)},
+     {last_update, latest_as_timestamp(State) }
+    ].
 
 %% ===================================================================
 %% Internal functions
