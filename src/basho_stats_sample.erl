@@ -24,12 +24,14 @@
 -export([new/0,
          update/2, update_all/2,
          count/1,
-	 sum/1, sum2/1,
+         sum/1, sum2/1,
          min/1, mean/1, max/1,
          variance/1, sdev/1,
          summary/1,
-	 summary_proplist/1
-	]).
+         summary_proplist/1
+        ]).
+
+-export([format_utc_timestamp/0, format_utc_timestamp/1]).
 
 -include("stats.hrl").
 
@@ -41,7 +43,18 @@
                  min = 'NaN',
                  max = 'NaN',
                  sum  = 0,
-                 sum2 = 0 }).
+                 sum2 = 0,
+                 latest = 0,
+                 last_update = {0,0,0}
+               }).
+
+
+
+format_utc_timestamp() ->
+    format_utc_timestamp(os:timestamp()).
+format_utc_timestamp({_,_,Micro} = TS) ->
+    {{Year,Month,Day},{Hour,Minute,Second}} = calendar:now_to_universal_time(TS),
+    iolist_to_binary(io_lib:format("~4w/~2..0w/~2..0w ~2w:~2..0w:~2..0w.~6..0w", [Year,Month,Day,Hour,Minute,Second,Micro])).
 
 
 %% ===================================================================
@@ -50,10 +63,12 @@
 
 new() ->
     #state{}.
-    
+
 update(Value, State) ->
     State#state {
       n   = State#state.n + 1,
+      latest = Value,
+      last_update = erlang:now(),
       min = nan_min(Value, State#state.min),
       max = nan_max(Value, State#state.max),
       sum = State#state.sum + Value,
@@ -73,6 +88,9 @@ min(State) ->
 sum(State) -> State#state.sum.
 
 sum2(State) -> State#state.sum2.
+
+latest(State) -> State#state.latest.
+latest_as_timestamp(State) -> format_utc_timestamp(State#state.last_update).
 
 mean(#state{n = 0}) ->
     'NaN';
@@ -108,7 +126,10 @@ summary_proplist(State) ->
      {variance, variance(State)},
      {sdev, sdev(State)},
      {sum, sum(State)},
-     {sum2, sum2(State)}].
+     {sum2, sum2(State)},
+     {last, latest(State)},
+     {last_update, latest_as_timestamp(State) }
+    ].
 
 %% ===================================================================
 %% Internal functions
