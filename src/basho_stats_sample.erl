@@ -106,7 +106,6 @@ variance(State) ->
     SumSq = State#state.sum * State#state.sum,
     (State#state.sum2 - (SumSq / State#state.n)) / (State#state.n - 1).
 
-
 sdev(State) ->
     case variance(State) of
         'NaN' ->
@@ -117,17 +116,25 @@ sdev(State) ->
 
 summary(State) ->
     {min(State), mean(State), max(State), variance(State), sdev(State)}.
-            
+
+usec_to_msec(V) when is_number(V) -> V / 1000.0;
+usec_to_msec('NaN') -> 'NaN'.
+
 summary_proplist(State) ->
     [{count, count(State)},
-     {min, min(State)},
-     {mean, mean(State)},
-     {max, max(State)},
-     {variance, variance(State)},
-     {sdev, sdev(State)},
+     {min_us, min(State)},
+     {min, usec_to_msec(min(State))},
+     {mean_us, mean(State)},
+     {mean, usec_to_msec(mean(State))},
+     {max_us, max(State)},
+     {max, usec_to_msec(max(State))},
+     {last, latest(State)},
+     {variance_us, variance(State)},
+     {variance, usec_to_msec(variance(State))},
+     {sdev_us, sdev(State)},
+     {sdev, usec_to_msec(sdev(State))},
      {sum, sum(State)},
      {sum2, sum2(State)},
-     {last, latest(State)},
      {last_update, latest_as_timestamp(State) }
     ].
 
